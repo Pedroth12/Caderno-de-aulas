@@ -1,6 +1,9 @@
 ---
+title: ""
+format: html
 about: 
   template: jolla
+  id: about-block
   image: "images/pedro.jpg"
   image-shape: round
   links:
