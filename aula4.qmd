@@ -1,0 +1,154 @@
+---
+title: "Aula 4 - Modelos Lineares Generalizados e Interações"
+author: "Pedro Thiagos Santos Nogueira"
+date: "2025-04-23"
+format: html
+editor: visual
+---
+
+## Aula 4 – 23/04/2025
+
+### Disciplina: FIP606 – Análise e Visualização de Dados em Fitopatologia
+
+**Professor:** Emerson Del Ponte
+
+#### ✦ Objetivos da aula:
+
+-   Avaliar modelos com resíduos simulados (pacote `DHARMa`)
+-   Introduzir modelos lineares generalizados (GLMs)
+-   Avaliar interações entre fatores com ANOVA e `emmeans`
+-   Usar transformações, identificar efeitos principais e interações
+-   Gerar gráficos de interação e comparação de médias
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Pacotes necessários
+library(DHARMa)
+library(car)
+library(multcomp)
+library(emmeans)
+library(gsheet)
+library(ggplot2)
+library(tidyverse)
+library(patchwork)
+library(agricolae)
+library(epifitter)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+insetos <- InsectSprays
+m3 <- lm(sqrt(count) ~ spray, data = insetos)
+hist(residuals(m3))
+qqnorm(residuals(m3))
+qqline(residuals(m3))
+shapiro.test(residuals(m3))
+anova(m3)
+# Avaliação de resíduos do modelo anterior (paramétrico)
+
+m3
+plot(simulateResiduals(m3))
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# GLM com distribuição Poisson (modelo para contagens)
+
+m4 <- glm(count ~ spray, data = insetos, family = poisson)
+anova(m4)
+Anova(m4)
+plot(simulateResiduals(m4))
+
+# Médias ajustadas e comparação
+medias_m4 <- emmeans(m4, ~ spray, type = "response")
+cld(medias_m4)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Interações entre tratamento e dose - antifúngicos
+
+antifungicos <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=2023059672#gid=2023059672")
+
+# Gráfico de interação
+interaction.plot(antifungicos$treat, antifungicos$dose, antifungicos$severity)
+
+# Visualizações individuais
+p1 <- antifungicos |> 
+  ggplot(aes(factor(dose), severity * 100)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1)
+
+p2 <- antifungicos |> 
+  ggplot(aes(treat, severity * 100)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1)
+
+# Combinação dos gráficos
+p1 + p2
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Modelo de interação completo e diagnóstico
+
+m_anti <- lm(severity ~ treat * dose, data = antifungicos)
+anova(m_anti)
+plot(simulateResiduals(m_anti))
+
+# Médias ajustadas por dose dentro de cada tratamento
+media_anti <- emmeans(m_anti, ~ dose | treat)
+media_anti
+cld(media_anti)
+
+# Coeficiente de variação
+cv.model(m_anti)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Análise de oídio com AUDPC (épifoca)
+
+oidio <- PowderyMildew
+
+# Visualização inicial com filtragem
+oidio |> 
+  filter(irrigation_type %in% c("MS", "MS above canopy", "Overhead")) |>  
+  ggplot(aes(time, sev)) +
+  geom_point() +
+  facet_grid(moisture ~ irrigation_type)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Cálculo do AUDPC e visualização por irrigação
+
+oidio2 <- oidio |> 
+  filter(irrigation_type %in% c("MS", "MS above canopy", "Overhead"))
+
+oidio3 <- oidio2 |> 
+  group_by(irrigation_type, moisture, block) |> 
+  summarize(AUDPC = AUDPC(time, sev), .groups = "drop")
+
+oidio3 |> 
+  ggplot(aes(irrigation_type, AUDPC, color = moisture)) +
+  geom_point(size = 2) +
+  scale_y_continuous(limits = c(0, 20))
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Modelo de interação: AUDPC ~ irrigação * umidade
+
+model_oidio <- lm(AUDPC ~ irrigation_type * moisture, data = oidio3)
+anova(model_oidio)
+plot(simulateResiduals(model_oidio))
+
+# Médias ajustadas
+medias_oidio <- emmeans(model_oidio, ~ irrigation_type | moisture)
+medias_oidio
+cld(medias_oidio)
+
+# Coeficiente de variação do modelo
+cv.model(model_oidio)
+```

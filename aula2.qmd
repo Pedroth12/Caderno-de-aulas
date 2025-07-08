@@ -1,0 +1,153 @@
+---
+title: "Aula 2 - Importação e Manipulação de Dados"
+author: "Pedro Thiagos Santos Nogueira"
+date: "2025-03-26"
+format: html
+editor: visual
+---
+
+## Aula 2 – 26/03/2025
+
+### Disciplina: FIP606 – Análise e Visualização de Dados em Fitopatologia
+
+**Professor:** Emerson Del Ponte
+
+#### ✦ Objetivos da aula:
+
+-   Importar dados de diferentes formatos (Excel, CSV e Google Sheets)
+-   Manipular tabelas com `dplyr`, `janitor` e `tidyverse`
+-   Aplicar funções como `mutate()`, `filter()`, `group_by()`, `select()` e `tabyl()`
+-   Criar visualizações básicas com `ggplot2`
+-   Exportar gráficos com `ggsave()`
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Carregamento dos pacotes
+
+library(tidyverse)  # Conjunto de pacotes para análise e visualização de dados
+library(readxl)     # Para leitura de arquivos Excel
+library(dplyr)      # Manipulação de dados (parte do tidyverse)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Leitura de dados a partir de um arquivo Excel
+
+dados <- read_excel("dados_diversos.xlsx", sheet = "sensibilidade_fungicidas")
+
+# Transformando a variável 'dose' para o tipo numérico
+dados2 <- dados |> 
+  mutate(dose = as.numeric(dose))
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Importando dados diretamente de planilhas do Google Sheets
+
+library(gsheet)  # Permite ler diretamente de links compartilhados
+
+dados_nuvem_analises <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?usp=sharing&ouid=114387405594168347966&rtpof=true&sd=true")
+dados_nuvem_Mg <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=983033137#gid=983033137")
+survey <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=1118819738#gid=1118819738")
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Manipulações com dplyr
+
+# Contagem de observações por estado
+dados_estado <- survey |>
+  group_by(state) |>
+  count()
+
+# Filtrando dados dos estados RS e PR
+RS <- survey |> filter(state == "RS")
+PR <- survey |> filter(state == "PR")
+
+# Combinando os dois conjuntos de dados
+combinado <- rbind(RS, PR)
+
+# Selecionando colunas específicas
+survey_b <- survey |> 
+  dplyr::select(year, state, species)
+
+# Filtrando dados do ano de 2010
+survey_2010 <- survey |> 
+  dplyr::select(year, state, species) |> 
+  filter(year == 2010)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Tabelas de contingência com janitor
+
+library(janitor)
+
+# Frequência de espécies por estado e ano
+survey_b |> 
+  tabyl(state, species, year)
+
+# Frequência de espécies por ano
+survey_b |> 
+  tabyl(species, year)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Gráfico de boxplot: efeito de tratamento com Mg
+
+Mg <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=983033137#gid=983033137")
+
+library(ggthemes)
+
+Plot_Mg <- Mg |> 
+  ggplot(aes(trat, comp)) +
+  geom_boxplot(fill = "darkorange", outline.color = NA) +
+  geom_jitter(width = 0.1, color = "gray25") +
+  scale_y_continuous(limits = c(5, 20)) +
+  labs(
+    x = "Tratamentos",  
+    y = "Comprimento (mm)", 
+    title = "Efeito do Mg", 
+    subtitle = "Tamanho da lesão da mancha parda",
+    caption = "Fonte: Rodrigues et al. 2020"
+  ) +
+  theme_clean() +
+  theme_minimal(base_size = 14)
+
+# Salvando o gráfico
+ggsave("box.png", bg = "white", width = 5, height = 5)
+```
+
+![](images/clipboard-3558917315.png)
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Gráfico de crescimento micelial por espécie
+
+micelial <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=959387827#gid=959387827")
+
+plot_micelial <- micelial |>
+  ggplot(aes(reorder(especie, tcm), tcm)) +
+  geom_boxplot(fill = "blue", outline.color = NA) +
+  geom_jitter(width = 0.1, color = "gray25") +
+  coord_flip() +
+  theme(axis.title.x = element_text(face = "italic")) +
+  labs(x = "Espécies", y = "Taxa de crescimento")
+# Exibir
+plot_micelial
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Combinação dos dois gráficos com patchwork
+
+library(patchwork)  # Facilita a junção de múltiplos gráficos no mesmo painel
+
+# Juntando os dois gráficos lado a lado, com letras A e B
+(Plot_Mg + plot_micelial) +
+  plot_annotation(tag_levels = "A")
+
+# Salvando o gráfico combinado
+ggsave("combol.png", bg = "white", width = 8, height = 5)
+```

@@ -1,0 +1,220 @@
+---
+title: "Aula 3 - Testes Estatísticos e Visualizações"
+author: "Pedro Thiagos Santos Nogueira"
+date: "2025-04-16"
+format: html
+editor: visual
+---
+
+## Aula 3 – 16/04/2025
+
+### Disciplina: FIP606 – Análise e Visualização de Dados em Fitopatologia
+
+**Professor:** Emerson Del Ponte
+
+#### ✦ Objetivos da aula:
+
+-   Aplicar testes estatísticos (t de Student, ANOVA, Kruskal-Wallis, Shapiro-Wilk, Levene)
+-   Comparar dois grupos com `t.test()`
+-   Verificar pressupostos de normalidade e homocedasticidade
+-   Usar modelos lineares (lm), ANOVA e transformações
+-   Visualizar resultados com `ggplot2` e `ggpubr`
+-   Trabalhar com dados paramétricos e não-paramétricos
+-   Realizar testes de médias (emmeans, multcomp)
+
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Pacotes necessários
+library(gsheet)        # Importa dados diretamente de planilhas Google Sheets
+library(tidyverse)     # Conjunto de pacotes para manipulação de dados (dplyr, tidyr, etc.)
+library(ggplot2)       # Criação de gráficos baseados no Grammar of Graphics
+library(ggpubr)        # Extensões do ggplot2 com suporte a estatísticas e temas prontos
+library(report)        # Gera interpretações automáticas e legíveis de testes estatísticos
+library(rstatix)       # Funções simplificadas para testes estatísticos (t, ANOVA, Levene, etc.)
+library(emmeans)       # Estima e compara médias ajustadas de modelos (muito útil pós-ANOVA)
+library(multcomp)      # Permite contrastes múltiplos e testes de comparações múltiplas
+library(multcompView)  # Gera letras compactas para visualização de grupos estatisticamente distintos
+library(car)           # Contém o teste de Levene (leveneTest) e outras funções para modelos lineares
+library(agricolae)     # Para o teste de Kruskal com agrupamento de médias
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Importando dados para comparação entre tratamentos
+
+data_Mg <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=983033137#gid=983033137")
+
+# Visualização inicial: dispersão dos valores por tratamento
+data_Mg |>  
+  ggplot(aes(trat, comp)) +
+  geom_jitter(width = 0.1)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Preparação dos dados para teste t de Student (dois grupos)
+
+# Transforma o data frame para formato wide: colunas separadas para cada grupo
+data_Mg2 <- data_Mg |> 
+  pivot_wider(names_from = trat, values_from = comp) |> 
+  select(-rep)  # Remove coluna de repetições (caso exista)
+
+# Teste t para dois grupos (não pareado)
+attach(data_Mg2)  # Acessar colunas diretamente (Mg2 e control)
+t_results <- t.test(Mg2, control, var.equal = FALSE)
+
+# Relatório interpretável do teste
+test_report <- report(t_results)
+test_report
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Teste t usando fórmula e comparação com ggplot
+
+test <- t_test(comp ~ trat, data = data_Mg)
+
+# Gráfico com comparação dos grupos e valor de p
+p <- ggboxplot(
+  data_Mg, x = "trat", y = "comp",
+  color = "trat", palette = "jco")
+
+# Adiciona valor de p ao gráfico
+p + 
+  stat_pvalue_manual(test, label = "p", y.position = 18) +
+  ylim(0, 20) +
+  labs(x = "Tratamento", y = "Comprimento (mm)")
+
+ggsave("plot2.png", bg = "white")
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Testes de pressupostos estatísticos
+
+# Normalidade (Shapiro-Wilk)
+shapiro.test(data_Mg2$Mg2)
+shapiro.test(data_Mg2$control)
+
+# Histogramas para avaliar distribuição visual
+hist(data_Mg2$Mg2)
+hist(data_Mg2$control)
+
+# Teste de homogeneidade de variâncias (F-test)
+var.test(data_Mg2$Mg2, data_Mg2$control)
+
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Análise de dados emparelhados – estudo de acurácia
+
+escala <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=1729131173#gid=1729131173")
+
+# Teste t para dados pareados entre dois métodos de avaliação
+t_test(acuracia ~ assessment, data = escala, paired = TRUE, var.equal = FALSE)
+
+# Visualização com boxplot
+escala |> 
+  ggplot(aes(assessment, acuracia)) +
+  geom_boxplot()
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Comparação direta entre duas categorias específicas
+
+unaided <- escala |> 
+  filter(assessment == "Unaided") |> 
+  select(acuracia) |> 
+  pull()
+
+aided <- escala |> 
+  filter(assessment == "Aided1") |> 
+  select(acuracia) |> 
+  pull()
+
+# Teste F para variâncias
+var.test(unaided, aided)
+
+# Verificação de normalidade
+hist(aided)
+shapiro.test(unaided)
+shapiro.test(aided)
+
+# Teste t pareado entre os dois grupos
+t.test(unaided, aided, paired = TRUE, var.equal = FALSE)
+
+# Teste não-paramétrico de Wilcoxon (caso normalidade não seja atendida)
+wilcox.test(unaided)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Dados de crescimento micelial por espécie (ANOVA)
+
+micelial <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=959387827#gid=959387827")
+
+# Visualização: dispersão por espécie
+micelial |> 
+  ggplot(aes(especie, tcm)) +
+  geom_jitter(width = 0.1)
+
+# Modelos para análise de variância
+anova1 <- aov(tcm ~ especie, data = micelial)      # ANOVA tradicional
+anova2 <- lm(tcm ~ especie, data = micelial)       # Modelo linear equivalente
+
+# Sumário dos testes
+anova(anova1)
+anova(anova2)
+
+# Diagnóstico de resíduos
+hist(residuals(anova1))
+shapiro.test(residuals(anova1))
+bartlett.test(tcm ~ especie, data = micelial)
+levene_test(tcm ~ especie, data = micelial)
+
+# Testes de médias
+m <- emmeans(anova2, ~ especie)
+m
+cld(m)  # Compact letter display
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Exemplo clássico: InsectSprays
+
+insetos <- InsectSprays
+
+# Visualização
+insetos |> 
+  ggplot(aes(spray, count)) +
+  geom_jitter(width = 0.1) +
+  geom_boxplot(outlier.color = NA)
+
+# Ajuste do modelo e diagnóstico
+m2 <- lm(count ~ spray, data = insetos)
+shapiro.test(residuals(m2))
+bartlett.test(count ~ spray, data = insetos)
+levene_test(count ~ spray, data = insetos)
+anova(m2)
+hist(residuals(m2))
+qqnorm(residuals(m2))
+qqline(residuals(m2))
+
+# Alternativa 1 – Transformação da resposta (sqrt)
+m3 <- lm(sqrt(count) ~ spray, data = insetos)
+hist(residuals(m3))
+qqnorm(residuals(m3))
+qqline(residuals(m3))
+shapiro.test(residuals(m3))
+anova(m3)
+m33 <- emmeans(m3, ~ spray, type = "response")
+cld(m33)
+plot(m33)
+
+# Alternativa 2 – Teste não-paramétrico de Kruskal-Wallis
+kruskal.test(count ~ spray, data = insetos)
+kruskal(insetos$count, insetos$spray, group = TRUE, console = TRUE)
+```

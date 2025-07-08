@@ -1,0 +1,39 @@
+---
+about: 
+  template: jolla
+  id: about-block
+  image: "images/pedro.jpg"
+  image-shape: round
+  links:
+    - icon: instagram
+      text: Instagram
+      href: https://www.instagram.com/pedroth17/
+    - icon: linkedin
+      text: LinkedIn
+      href: https://www.linkedin.com/in/pedro-thiago-santos-nogueira-0931271bb/
+    - icon: github
+      text: Github
+      href: https://github.com/Pedroth12
+    - icon: envelope
+      text: Email
+      href: "pedro.thiago@ufv.br"
+---
+
+```{=html}
+<style>
+body {
+  background-image: url('images/background.png');
+}
+</style>
+```
+
+## Sobre mim
+
+Olá! Meu nome é **Pedro Thiagos Santos Nogueira**, sou **Engenheiro Agrônomo**, formado pela [Universidade Federal de Viçosa (UFV)](https://www.ufv.br/). Desde cedo, desenvolvi interesse pelas interações entre fungos e plantas, o que me levou a seguir uma trajetória acadêmica voltada à **micologia**. Realizei meu **mestrado em Fitopatologia**, com ênfase em **taxonomia de fungos**, e atualmente curso o **doutorado** no mesmo programa, vinculado ao [Departamento de Fitopatologia da UFV](https://www.dfp.ufv.br/).
+
+Atuo no [**Micolab**](https://www.instagram.com/micolabufv/), laboratório de referência em micologia da UFV, sob orientação do Prof. Dr. [**Olinto Liparini Pereira**](https://www.dfp.ufv.br/departamento/docentes/olinto/), onde desenvolvo pesquisas voltadas à diversidade, sistemática e ecologia de fungos fitopatogênicos e endofíticos. Além disso, sou **membro conselheiro da [L.A. Fungi – Liga Acadêmica de Estudo e Pesquisa em Micologia](https://www.instagram.com/lafungi.ufv/?__d=1)**, iniciativa dedicada à difusão do conhecimento micológico.
+
+## Sobre este site
+
+Este site foi desenvolvido em **Quarto Markdown** como parte das atividades da disciplina\
+**FIP606 – Análise e Visualização de Dados em Fitopatologia**, ministrada pelo Prof. Dr. [**Emerson Del Ponte**](https://emersondelponte.netlify.app/). Aqui, organizei os conteúdos abordados ao longo da disciplina, com scripts comentados. Sinta-se convidado(a) a **navegar pelos conteúdos** e explorar o potencial do **R** e da **visualização de dados** no entendimento de sistemas fitopatológicos.

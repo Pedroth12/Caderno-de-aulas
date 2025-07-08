@@ -1,0 +1,123 @@
+---
+title: "Aula 5 - Modelos Mistos, Transformações e Correlações"
+author: "Pedro Thiagos Santos Nogueira"
+date: "2025-04-30"
+format: html
+editor: visual
+---
+
+## Aula 5 – 30/04/2025
+
+### Disciplina: FIP606 – Análise e Visualização de Dados em Fitopatologia
+
+**Professor:** Emerson Del Ponte
+
+#### ✦ Objetivos da aula:
+
+-   Aplicar modelos lineares com blocos
+-   Interpretar modelos mistos com o pacote `lme4`
+-   Calcular médias ajustadas e fazer comparações múltiplas
+-   Avaliar resíduos simulados com `DHARMa`
+-   Explorar relações entre variáveis por meio de correlações e regressão
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Pacotes necessários
+library(gsheet)
+library(tidyverse)
+library(ggplot2)
+library(report)
+library(rstatix)
+library(agricolae)
+library(epifitter)
+library(car)
+library(multcomp)
+library(DHARMa)
+library(multcompView)
+library(emmeans)
+library(patchwork)
+library(lme4)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Análise de experimento em campo (tratamentos x produtividade)
+
+campo <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=866852711#gid=866852711")
+
+# Visualização inicial
+campo |> 
+  ggplot(aes(TRAT, PROD)) +
+  geom_jitter(width = 0.1) +
+  stat_summary(fun.data = 'mean_cl_boot', colour = 'red', width = 0.3)
+
+# Conversão de variáveis para fator
+campo$TRAR <- factor(campo$TRAT)
+campo$BLOCO <- factor(campo$BLOCO)
+
+# Modelo com transformação logarítmica (para FER)
+m_campo <- lm(log(FER) ~ BLOCO + TRAT, data = campo)
+anova(m_campo)
+plot(simulateResiduals(m_campo))
+
+# Médias ajustadas
+means_campo <- emmeans(m_campo, ~ TRAT, type = "response")
+means_campo
+cv.model(m_campo)
+plot(means_campo)
+cld(means_campo)
+pwpm(means_campo)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Dados de milho híbrido
+
+milho <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=1345524759#gid=1345524759")
+
+# Visualização por método e híbrido
+milho |> 
+  ggplot(aes(hybrid, index, color = method)) +
+  geom_jitter(width = 0.1) +
+  coord_flip()
+
+# Criação de bloco aninhado (modelo misto)
+milho$hybrid_block <- interaction(milho$hybrid, milho$block)
+
+# Modelo misto para índice
+m_milho <- lmer(index ~ hybrid * method + (1 | block:hybrid_block), data = milho)
+car::Anova(m_milho)
+plot(simulateResiduals(m_milho))
+media_milho <- emmeans(m_milho, ~ method | hybrid)
+cld(media_milho, Letters = letters)
+
+# Modelo misto para produtividade
+yield_model <- lmer(yield ~ hybrid * method + (1 | block:hybrid_block), data = milho)
+car::Anova(yield_model)
+plot(simulateResiduals(yield_model))
+media_milho2 <- emmeans(yield_model, ~ method | hybrid)
+cld(media_milho2, Letters = letters)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Correlação entre variáveis de desempenho (índice vs produtividade)
+
+milho |> 
+  ggplot(aes(index, yield)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+cor1 <- cor(milho$index, milho$yield)
+cor1 * cor1 * 100
+cor.test(milho$index, milho$yield)
+
+# Correlação em dados de campo
+cor(campo$FER, campo$PROD)
+cor.test(campo$FER, campo$DFC)
+
+campo |> 
+  ggplot(aes(FER, DFC)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```

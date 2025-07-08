@@ -1,0 +1,50 @@
+project:
+  type: website
+
+execute: 
+  cache: true
+  freeze: auto
+
+website:
+  title: "PTN Blog"
+  favicon: images/icone.png
+  navbar:
+    pinned: true
+    background: "#571d1a"
+    left:
+      - href: index.qmd
+        text: Home
+        icon: house-door-fill
+      - text: "Aulas"
+        icon: r-squate-fill
+        menu: 
+          - text: 'Aula 1'
+            file: aula1.qmd
+          - text: "Aula 2"
+            file: aula2.qmd
+          - text: 'Aula 3'
+            file: aula3.qmd
+          - text: "Aula 4"
+            file: aula4.qmd
+          - text: "Aula 5"
+            file: aula5.qmd
+          - text: "Aula 6"
+            file: aula6.qmd
+
+  page-navigation: true
+  page-footer: 
+    left: "Copyright 2025, P.T.S. Nogueira"
+    background: "#571d1a"
+
+format:
+  html:
+    theme:
+      light: sandstone
+      dark: darkly
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    warning: false
+
+editor: visual
+

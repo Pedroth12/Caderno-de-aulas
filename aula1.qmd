@@ -1,0 +1,89 @@
+---
+title: "Aula 1 - Introdução ao R e AUDPC"
+author: "Pedro Thiagos Santos Nogueira"
+date: "2025-03-19"
+format: html
+editor: visual
+---
+
+## Aula 1 – 19/03/2025
+
+### Disciplina: FIP606 – Análise e Visualização de Dados em Fitopatologia
+
+**Professor:** Emerson Del Ponte
+
+#### ✦ Objetivos da aula:
+
+-   Introdução ao ambiente de análise R
+-   Criação e organização de projetos
+-   Instalação e carregamento de pacotes
+-   Execução de comandos básicos
+-   Introdução ao modelo de documento 'Quarto'
+-   Visualização gráfica com ggplot2
+-   Cálculo e interpretação da AUDPC (Área abaixo da curva de progresso da doença)
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Instalação e carregamento de pacotes
+
+# O pacote agricolae contém funções úteis para experimentação agrícola,
+# como o cálculo da AUDPC (área abaixo da curva de progresso da doença).
+library(agricolae)
+
+# tidyverse é uma coleção de pacotes para manipulação e visualização de dados.
+library(tidyverse)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Exemplo básico de uso da função audpc()
+
+# Vetor com as datas das avaliações da doença (em dias após o plantio)
+dates <- c(14, 21, 28)  
+dates
+
+# Severidade da doença em cada data correspondente
+severity <- c(40, 80, 90)  
+severity
+
+# Cálculo da AUDPC com base nos valores de severidade e datas
+audpc(severity, dates, type = "absolute")
+# type = "absolute" calcula a área total sob a curva (sem normalizar)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Explorando conjunto de dados de exemplo (incluso no pacote agricolae)
+data(corn)  # dataset com dados simulados de milho
+str(corn)   # estrutura do objeto 'corn'
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Criando um gráfico de progresso da doença
+
+# Definindo datas e severidade de uma curva simulada
+dates <- c(7, 14, 21, 28, 35, 42)
+severity <- c(0.1, 5, 10, 35, 50, 60)
+
+# Criando um data frame com as datas e severidade
+data_curva <- data.frame(dates, severity)
+
+# Usando o operador |> (pipe) para aplicar funções de forma sequencial
+# Criamos uma nova coluna chamada 'severity2' com dados ajustados para visualização
+
+data_curva |>  
+  mutate(severity2 = c(1, 10, 35, 58, 70, 79)) |> 
+  ggplot(aes(dates, severity2)) +  # Mapeamento estético: eixo x = datas, eixo y = severidade2
+  geom_area(fill = "blue") +       # Área sob a curva (cor azul)
+  geom_line(linewidth = 2, color = "red") +  # Linha vermelha grossa
+  geom_point(size = 4, color = "yellow") +   # Pontos de avaliação (amarelos)
+  labs(x = "Dias após o plantio", y = "Severidade") +  # Rótulos dos eixos
+  scale_y_continuous(limits = c(0, 100))     # Limite do eixo y de 0 a 100
+```
+
+## Observações finais
+
+-   A função `audpc()` é amplamente usada para quantificar a severidade acumulada de doenças ao longo do tempo.
+-   A visualização com `ggplot2` permite interpretar graficamente o progresso da doença.
+-   O uso do Quarto permite consolidar análises, gráficos e interpretações em documentos científicos reprodutíveis.

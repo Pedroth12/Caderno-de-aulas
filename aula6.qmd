@@ -1,0 +1,152 @@
+---
+title: "Aula 6 - Transformações, Modelos Mistos e Regressões Não Lineares"
+author: "Pedro Thiagos Santos Nogueira"
+date: "2025-05-14"
+format: html
+editor: visual
+---
+
+## Aula 6 – 14/05/2025
+
+### Disciplina: FIP606 – Análise e Visualização de Dados em Fitopatologia
+
+**Professor:** Emerson Del Ponte
+
+#### ✦ Objetivos da aula:
+
+-   Aplicar transformações Box-Cox em dados não normais
+-   Ajustar modelos lineares por experimento
+-   Usar modelos mistos com estrutura hierárquica
+-   Visualizar interações entre tratamentos e experimentos
+-   Ajustar modelos de regressão não linear (dose-resposta)
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Transformação Box-Cox em dados de contagem
+
+library(MASS)
+library(DHARMa)
+library(epifitter)
+library(tidyverse)
+
+insects <- InsectSprays
+
+# Ajuste inicial e avaliação dos resíduos
+m1 <- lm(count ~ spray, data = insects)
+plot(simulateResiduals(m1))
+
+# Box-Cox para determinar transformação ideal
+b <- boxcox(count + 0.1 ~ 1, data = insects)
+lambda <- b$x[which.max(b$y)]
+lambda
+
+# Aplicando transformação e inspecionando
+insects <- insects |> 
+  mutate(count2 = (count^lambda - 1) / lambda,
+         count3 = sqrt(count))
+
+hist(insects$count2)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Regressões por experimento (modelo separado por exp)
+
+library(gsheet)
+library(ggplot2)
+
+estande <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=401662555#gid=401662555")
+
+estande |> 
+  ggplot(aes(trat, nplants)) +
+  geom_point(width = 0.1) +
+  geom_smooth(method = "lm", se = FALSE, colour = "darkgreen") +
+  facet_wrap(~exp) +
+  theme_minimal() +
+  labs(x = "Tratamento", y = "Número de plantas")
+
+# Modelos separados por experimento
+exp1 <- estande |> filter(exp == 1)
+m_exp1 <- lm(nplants ~ trat, data = exp1)
+summary(m_exp1)
+
+exp2 <- estande |> filter(exp == 2)
+m_exp2 <- lm(nplants ~ trat + bloco, data = exp2)
+summary(m_exp2)
+
+exp3 <- estande |> filter(exp == 3)
+m_exp3 <- lm(nplants ~ trat + bloco, data = exp3)
+summary(m_exp3)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Modelo misto considerando exp e blocos como efeitos aleatórios
+
+library(lme4)
+
+m_misto <- lmer(nplants ~ trat + (1 | exp/bloco), data = estande)
+confint(m_misto)
+summary(m_misto)
+car::Anova(m_misto)
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Visualização das interações experimento x tratamento
+
+estande |> 
+  ggplot(aes(trat, nplants, colour = factor(exp))) +
+  geom_point() +
+  geom_abline(intercept = 69.74, slope = -0.568, linewidth = 2) +
+  geom_abline(intercept = 43, slope = -0.73, linetype = "dashed") +
+  geom_abline(intercept = 96, slope = -0.40, linetype = "dashed")
+```
+
+```{r}
+# ───────────────────────────────────────────────────────────────
+# Regressão não linear – modelo de dose-resposta
+
+fungi <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=465348652#gid=465348652")
+
+fungi |> 
+  group_by(code, dose) |> 
+  summarise(germination = mean(germination), .groups = "drop") |> 
+  ggplot(aes(dose, germination)) +
+  geom_point(width = 0.1) +
+  geom_line() +
+  facet_wrap(~code)
+
+# Modelo para um isolado específico
+FGT43 <- fungi |> 
+  group_by(code, dose) |> 
+  summarise(germination = mean(germination), .groups = "drop") |> 
+  filter(code == "FGT43")
+
+library(drc)
+m43 <- drm(germination ~ dose, data = FGT43, fct = LL.3())
+AIC(m43)
+plot(m43)
+ED(m43, 50)
+
+# Estimativa de EC50 para todos os isolados
+library(ec50estimator)
+df_ec50 = estimate_EC50(germination ~ dose, 
+                        data = fungi, 
+                        isolate_col = "code", 
+                        strata_col =  "state", 
+                        interval = "delta", 
+                        fct = drc::LL.3())
+
+# Visualização dos EC50 por isolado
+
+df_ec50 |> 
+  ggplot(aes(reorder(ID, Estimate), Estimate)) +
+  geom_point() +
+  coord_flip()
+
+df_ec50 |> 
+  ggplot(aes(x = Estimate)) +
+  geom_boxplot() +
+  geom_histogram(bins = 5, color = "white")
+```
