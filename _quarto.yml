@@ -12,6 +12,7 @@ website:
   navbar:
     pinned: true
     background: "#571d1a"
+    collapse-below: lg
     left:
       - href: index.qmd
         text: Home
@@ -34,17 +35,16 @@ website:
 
   page-navigation: true
   page-footer: 
+    background: light
     left: "Copyright 2025, P.T.S. Nogueira"
-    background: "#571d1a"
 
 format:
   html:
     theme:
-      light: sandstone
+      light: faltly
       dark: darkly
+    css: styles.css
     toc: true
-    code-copy: true
-    code-overflow: wrap
     warning: false
 
 editor: visual

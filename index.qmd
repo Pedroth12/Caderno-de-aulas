@@ -3,7 +3,7 @@ title: ""
 format: html
 about: 
   template: jolla
-  id: about-block
+  id: hero-heading
   image: "images/pedro.jpg"
   image-shape: round
   links:
@@ -21,13 +21,6 @@ about:
       href: "pedro.thiago@ufv.br"
 ---
 
-```{=html}
-<style>
-body {
-  background-image: url('images/background.png');
-}
-</style>
-```
 
 ## Sobre mim
 
